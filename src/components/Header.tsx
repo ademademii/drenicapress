@@ -1,5 +1,5 @@
 import Link from "next/link";
-import CategoriesMenu from "./CategoriesMenu";
+import NavMenu from "./NavMenu";
 
 export default function Header() {
   return (
@@ -23,7 +23,7 @@ export default function Header() {
       </Link>
 
       {/* Menyja e kategorive — import nga komponenti */}
-      <CategoriesMenu />
+      <NavMenu />
     </header>
   );
 }
