@@ -8,7 +8,7 @@ export default function Card({ post }: CardProps) {
     post._embedded?.["wp:featuredmedia"]?.[0]?.source_url || "/placeholder.jpg";
 
   return (
-    <a href={`/post/${post.slug}`} className="block border p-2">
+    <a href={`/post/${post.slug}`} className="block">
       <img
         src={imageUrl}
         alt={post.title.rendered}

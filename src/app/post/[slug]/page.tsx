@@ -1,68 +1,58 @@
 // src/app/post/[slug]/page.tsx
+import { getPostBySlug, getRelatedPosts } from "@/lib/wordpress";
+import PostHeader from "@/components/PostHeader";
+import Breadcrumb from "@/components/Breadcrumb";
+import RelatedPosts from "@/components/RelatedPosts";
 
-import parse from "html-react-parser";
+interface PageProps {
+  params: Promise<{ slug: string }>;
+}
 
-interface WPPost {
-  id: number;
-  title: { rendered: string };
-  content: { rendered: string };
-  excerpt: { rendered: string };
-  slug: string;
-  _embedded?: {
-    ["wp:featuredmedia"]?: Array<{
-      source_url: string;
-      alt_text: string;
-    }>;
+export async function generateMetadata({ params }: PageProps) {
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
+
+  if (!post) return {};
+
+  return {
+    title: post.title.rendered,
+    description: post.excerpt.rendered.replace(/<[^>]+>/g, ""),
   };
 }
 
-async function getPost(slug: string): Promise<WPPost | null> {
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/wp-json/wp/v2/posts?slug=${slug}&_embed=true`,
-      { cache: "no-store" }
-    );
-
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    if (!data.length) return null;
-
-    return data[0]; // the single post
-  } catch (err) {
-    console.error(err);
-    return null;
-  }
-}
-
-export default async function SinglePostPage({ params }: { params: { slug: string } }) {
-  const post = await getPost(params.slug);
+export default async function PostPage({ params }: PageProps) {
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
 
   if (!post) {
-    return <div className="p-6">Posti nuk u gjet.</div>;
+    return <h1 className="text-center mt-10">Post not found</h1>;
   }
 
-  const featured =
-    post._embedded?.["wp:featuredmedia"]?.[0]?.source_url ||
-    "/placeholder.jpg";
+  const category = post._embedded["wp:term"][0][0];
+  const relatedPosts = await getRelatedPosts(category.id, post.id);
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-4">
-        {parse(post.title.rendered)}
-      </h1>
-
-      {/* Featured Image */}
-      <img
-        src={featured}
-        alt={post.title.rendered}
-        className="w-full h-auto rounded mb-6"
+    <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        category={{ name: category.name, slug: category.slug }}
+        title={post.title.rendered}
       />
 
+      {/* Post Header with Image */}
+      <PostHeader post={post} />
+
       {/* Post Content */}
-      <article className="prose prose-lg max-w-none">
-        {parse(post.content.rendered)}
-      </article>
-    </div>
+      <article
+        className="prose max-w-none prose-headings:font-bold prose-a:text-blue-600 hover:prose-a:text-blue-800 sm:prose-lg lg:prose-xl"
+        dangerouslySetInnerHTML={{ __html: post.content.rendered }}
+      />
+
+      {/* Related Posts */}
+      <section className="mt-12">
+        <h2 className="text-2xl font-bold mb-6">Related Posts</h2>
+        <RelatedPosts posts={relatedPosts} />
+      </section>
+    </main>
   );
 }
